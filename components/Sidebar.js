@@ -39,7 +39,7 @@ export default function Sidebar() {
             <img 
               src="/logo.png" 
               alt="Logo" 
-              className="w-10 h-10 object-contain" 
+              className="w-16 h-10 object-contain" 
             />
           </Link>
         </div>
