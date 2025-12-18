@@ -61,24 +61,39 @@ export default function PostList() {
     return () => unsubscribe();
   }, [userCache]); // キャッシュが更新された際にも反応するように設定
 
-  const handleLike = async (postId, likes = []) => {
-    const user = auth.currentUser;
-    if (!user) return alert("ログインが必要です");
+  // components/PostList.js 内の handleLike 関数を修正
 
-    const postRef = doc(db, "posts", postId);
-    const isLiked = likes.includes(user.uid);
+const handleLike = async (postId, likes = [], postOwnerId) => { // 引数に postOwnerId を追加
+  const user = auth.currentUser;
+  if (!user) return alert("ログインが必要です");
 
-    try {
-      if (isLiked) {
-        await updateDoc(postRef, { likes: arrayRemove(user.uid) });
-      } else {
-        await updateDoc(postRef, { likes: arrayUnion(user.uid) });
+  const postRef = doc(db, "posts", postId);
+  const isLiked = likes.includes(user.uid);
+
+  try {
+    if (isLiked) {
+      await updateDoc(postRef, { likes: arrayRemove(user.uid) });
+    } else {
+      await updateDoc(postRef, { likes: arrayUnion(user.uid) });
+
+      // 【追加】いいねした時だけ通知を送る（自分の投稿へのいいね以外）
+      if (user.uid !== postOwnerId) {
+        await addDoc(collection(db, "notifications"), {
+          type: "like",
+          fromUserId: user.uid,
+          fromUserName: user.displayName || "誰か",
+          toUserId: postOwnerId,
+          postId: postId,
+          createdAt: serverTimestamp(),
+          read: false // 未読フラグ
+        });
       }
-    } catch (error) {
-      console.error("Like error:", error);
     }
-  };
-
+  } catch (error) {
+    console.error("Like error:", error);
+  }
+};
+    
   return (
     <div className="flex flex-col">
       {posts.length === 0 && (
