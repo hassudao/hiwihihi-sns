@@ -11,7 +11,9 @@ import {
   updateDoc, 
   arrayUnion, 
   arrayRemove, 
-  getDoc 
+  getDoc,
+  addDoc,           // これが必要！
+  serverTimestamp   // これが必要！
 } from "firebase/firestore";
 import { Heart, MessageCircle, Repeat2, Share, Loader2 } from "lucide-react";
 
