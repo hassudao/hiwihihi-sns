@@ -19,27 +19,34 @@ import { Heart, MessageCircle, Repeat2, Share, Loader2 } from "lucide-react";
 
 export default function PostList() {
   const [posts, setPosts] = useState([]);
-  const [userCache, setUserCache] = useState({});
+  const [userCache, setUserCache] = useState({}); // 取得したユーザー情報をメモしておく場所
 
   useEffect(() => {
     const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
     
+    // リアルタイム購読を開始
     const unsubscribe = onSnapshot(q, async (snapshot) => {
       const postData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 
+      // 各投稿のUIDを元に、最新のユーザー情報を合体させる
       const updatedPosts = await Promise.all(
         postData.map(async (post) => {
+          // すでにキャッシュにある場合はそれを使う
           if (userCache[post.uid]) {
             return { ...post, ...userCache[post.uid] };
           }
+
+          // キャッシュになければ、usersコレクションから取得
           try {
             const userRef = doc(db, "users", post.uid);
             const userSnap = await getDoc(userRef);
+
             if (userSnap.exists()) {
               const userData = {
                 username: userSnap.data().username,
                 userPhoto: userSnap.data().photoURL,
               };
+              // キャッシュに保存
               setUserCache((prev) => ({ ...prev, [post.uid]: userData }));
               return { ...post, ...userData };
             }
@@ -49,13 +56,14 @@ export default function PostList() {
           return post;
         })
       );
+
       setPosts(updatedPosts);
     });
 
     return () => unsubscribe();
   }, [userCache]);
 
-  // ★修正ポイント1: handleLikeをコンポーネント内に正しく配置
+  // いいね処理 ＆ 通知送信ロジック
   const handleLike = async (postId, likes = [], postOwnerId) => {
     const user = auth.currentUser;
     if (!user) return alert("ログインが必要です");
@@ -65,27 +73,27 @@ export default function PostList() {
 
     try {
       if (isLiked) {
+        // いいね解除
         await updateDoc(postRef, { likes: arrayRemove(user.uid) });
       } else {
+        // いいね追加
         await updateDoc(postRef, { likes: arrayUnion(user.uid) });
 
-        // いいねした時に通知を送る（自分以外へのいいねの場合）
-        // ... (略)
+        // 自分以外へのいいねの場合のみ通知を送る
         if (user.uid !== postOwnerId) {
-          // キャッシュや現在のユーザーから名前を特定
+          // 送信者の名前を特定（displayNameがなければキャッシュから取得）
           const senderName = user.displayName || userCache[user.uid]?.username || "誰か";
 
           await addDoc(collection(db, "notifications"), {
             type: "like",
             fromUserId: user.uid,
-            fromUserName: senderName, // ここを修正
+            fromUserName: senderName,
             toUserId: postOwnerId,
             postId: postId,
             createdAt: serverTimestamp(),
-            read: false 
+            read: false
           });
         }
-// ...
       }
     } catch (error) {
       console.error("Like error:", error);
@@ -140,7 +148,7 @@ export default function PostList() {
                 </button>
                 
                 <button 
-                  // ★修正ポイント2: post.uid（投稿者のID）を第3引数として渡す
+                  // 投稿者のUID（post.uid）を第3引数に渡すことで通知先を特定
                   onClick={() => handleLike(post.id, post.likes, post.uid)}
                   className={`flex items-center gap-1 p-2 rounded-full transition ${
                     isLiked ? "text-pink-500" : "hover:text-pink-500 hover:bg-pink-50"
