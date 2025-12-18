@@ -70,17 +70,22 @@ export default function PostList() {
         await updateDoc(postRef, { likes: arrayUnion(user.uid) });
 
         // いいねした時に通知を送る（自分以外へのいいねの場合）
+        // ... (略)
         if (user.uid !== postOwnerId) {
+          // キャッシュや現在のユーザーから名前を特定
+          const senderName = user.displayName || userCache[user.uid]?.username || "誰か";
+
           await addDoc(collection(db, "notifications"), {
             type: "like",
             fromUserId: user.uid,
-            fromUserName: user.displayName || "誰か",
+            fromUserName: senderName, // ここを修正
             toUserId: postOwnerId,
             postId: postId,
             createdAt: serverTimestamp(),
             read: false 
           });
         }
+// ...
       }
     } catch (error) {
       console.error("Like error:", error);
