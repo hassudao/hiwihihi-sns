@@ -2,13 +2,28 @@
 
 import { useEffect, useState } from "react";
 import { auth, db } from "@/lib/firebase";
-import { doc, getDoc, collection, query, where, orderBy, onSnapshot, updateDoc, arrayUnion, arrayRemove } from "firebase/firestore";
-import { useParams } from "next/navigation";
-import { CalendarDays, Edit3, Loader2 } from "lucide-react";
+import { 
+  doc, 
+  getDoc, 
+  collection, 
+  query, 
+  where, 
+  orderBy, 
+  onSnapshot, 
+  updateDoc, 
+  arrayUnion, 
+  arrayRemove, 
+  addDoc, 
+  getDocs, 
+  serverTimestamp 
+} from "firebase/firestore";
+import { useParams, useRouter } from "next/navigation";
+import { CalendarDays, Loader2, Mail } from "lucide-react"; // Mailアイコンを追加
 import EditProfileModal from "@/components/EditProfileModal";
 
 export default function ProfilePage() {
   const { id } = useParams();
+  const router = useRouter();
   const [userProfile, setUserProfile] = useState(null);
   const [myProfile, setMyProfile] = useState(null);
   const [userPosts, setUserPosts] = useState([]);
@@ -20,19 +35,16 @@ export default function ProfilePage() {
       let targetUid = id === "me" ? user?.uid : id;
       if (!targetUid) return;
 
-      // 1. 自分のプロフィールを取得（フォロー状態の確認用）
       if (user) {
         const myDoc = await getDoc(doc(db, "users", user.uid));
         setMyProfile(myDoc.data());
       }
 
-      // 2. 表示対象のユーザー情報を取得
       const userDoc = await getDoc(doc(db, "users", targetUid));
       if (userDoc.exists()) {
         setUserProfile({ id: userDoc.id, ...userDoc.data() });
       }
 
-      // 3. 投稿一覧を取得
       const q = query(collection(db, "posts"), where("uid", "==", targetUid), orderBy("createdAt", "desc"));
       const unsubscribePosts = onSnapshot(q, (snapshot) => {
         setUserPosts(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
@@ -45,7 +57,7 @@ export default function ProfilePage() {
     return () => unsubscribeAuth();
   }, [id]);
 
-  // フォロー/フォロー解除処理
+  // フォロー/フォロー解除 ＆ 通知処理
   const handleFollow = async () => {
     if (!auth.currentUser || !userProfile) return;
     const myUid = auth.currentUser.uid;
@@ -57,18 +69,52 @@ export default function ProfilePage() {
 
     try {
       if (isFollowing) {
-        // フォロー解除
         await updateDoc(myRef, { following: arrayRemove(targetUid) });
         await updateDoc(targetRef, { followers: arrayRemove(myUid) });
       } else {
-        // フォロー
         await updateDoc(myRef, { following: arrayUnion(targetUid) });
         await updateDoc(targetRef, { followers: arrayUnion(myUid) });
+
+        // フォロー通知の送信
+        if (myUid !== targetUid) {
+          await addDoc(collection(db, "notifications"), {
+            type: "follow",
+            fromUserId: myUid,
+            fromUserName: myProfile?.username || "誰か",
+            toUserId: targetUid,
+            createdAt: serverTimestamp(),
+            read: false
+          });
+        }
       }
-      // 画面上の状態を即時更新するためにリロード（本来はstate管理が理想）
       window.location.reload();
     } catch (error) {
       console.error("Follow error:", error);
+    }
+  };
+
+  // メッセージ開始処理
+  const handleStartMessage = async () => {
+    const user = auth.currentUser;
+    if (!user || !userProfile) return;
+
+    const chatsRef = collection(db, "chats");
+    const q = query(chatsRef, where("users", "array-contains", user.uid));
+    
+    const querySnapshot = await getDocs(q);
+    let existingChat = querySnapshot.docs.find(doc => 
+      doc.data().users.includes(userProfile.id)
+    );
+
+    if (existingChat) {
+      router.push(`/messages/${existingChat.id}`);
+    } else {
+      const newChatRef = await addDoc(chatsRef, {
+        users: [user.uid, userProfile.id],
+        updatedAt: serverTimestamp(),
+        lastMessage: ""
+      });
+      router.push(`/messages/${newChatRef.id}`);
     }
   };
 
@@ -94,18 +140,30 @@ export default function ProfilePage() {
           <div className="flex justify-between items-end -mt-16 mb-4">
             <img src={userProfile.photoURL || "https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png"} className="w-32 h-32 rounded-full border-4 border-white bg-gray-300 object-cover" />
             
-            {isMe ? (
-              <button onClick={() => setIsEditOpen(true)} className="border border-gray-300 font-bold px-4 py-2 rounded-full hover:bg-gray-100 transition mb-2">
-                プロフィールを編集
-              </button>
-            ) : (
-              <button 
-                onClick={handleFollow}
-                className={`font-bold px-6 py-2 rounded-full transition mb-2 ${isFollowing ? "border border-gray-300 hover:bg-red-50 hover:text-red-500 hover:border-red-200" : "bg-black text-white hover:bg-gray-800"}`}
-              >
-                {isFollowing ? "フォロー中" : "フォローする"}
-              </button>
-            )}
+            <div className="flex gap-2 mb-2 items-center">
+              {isMe ? (
+                <button onClick={() => setIsEditOpen(true)} className="border border-gray-300 font-bold px-4 py-2 rounded-full hover:bg-gray-100 transition">
+                  プロフィールを編集
+                </button>
+              ) : (
+                <>
+                  {/* メッセージボタン */}
+                  <button 
+                    onClick={handleStartMessage}
+                    className="p-2 border border-gray-300 rounded-full hover:bg-gray-100 transition"
+                  >
+                    <Mail size={20} />
+                  </button>
+                  {/* フォローボタン */}
+                  <button 
+                    onClick={handleFollow}
+                    className={`font-bold px-6 py-2 rounded-full transition ${isFollowing ? "border border-gray-300 hover:bg-red-50 hover:text-red-500 hover:border-red-200" : "bg-black text-white hover:bg-gray-800"}`}
+                  >
+                    {isFollowing ? "フォロー中" : "フォローする"}
+                  </button>
+                </>
+              )}
+            </div>
           </div>
           
           <h2 className="text-xl font-bold">{userProfile.username}</h2>
