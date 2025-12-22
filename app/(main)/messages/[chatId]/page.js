@@ -23,7 +23,7 @@ export default function ChatPage() {
   const [partner, setPartner] = useState(null);
   const scrollRef = useRef(null);
 
-  // 1. チャット相手の情報を取得
+  // 1. チャット相手の情報を取得（通知を送るためにIDも保存するように修正）
   useEffect(() => {
     const fetchPartner = async () => {
       const chatDoc = await getDoc(doc(db, "chats", chatId));
@@ -31,7 +31,10 @@ export default function ChatPage() {
         const partnerId = chatDoc.data().users.find(uid => uid !== auth.currentUser?.uid);
         if (partnerId) {
           const userDoc = await getDoc(doc(db, "users", partnerId));
-          setPartner(userDoc.data());
+          if (userDoc.exists()) {
+            // IDも含めてセットすることで通知の宛先に使いやすくします
+            setPartner({ id: userDoc.id, ...userDoc.data() });
+          }
         }
       }
     };
@@ -55,7 +58,7 @@ export default function ChatPage() {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // メッセージ送信処理
+  // メッセージ送信処理 ＆ 通知送信ロジックを統合
   const sendMessage = async (e) => {
     e.preventDefault();
     if (!inputText.trim()) return;
@@ -65,51 +68,33 @@ export default function ChatPage() {
     setInputText("");
 
     try {
-    // 1. メッセージを保存
-    await addDoc(collection(db, "chats", chatId, "messages"), {
-      text: text,
-      senderId: user.uid,
-      createdAt: serverTimestamp(),
-    });
-
-    // 2. チャットの最終更新を保存
-    await updateDoc(doc(db, "chats", chatId), {
-      lastMessage: text,
-      updatedAt: serverTimestamp(),
-    });
-
-    // ★追加：相手に通知を送る
-    // partnerId は useEffect で既に特定できているはずです（partner.id など）
-    if (partner) {
-      await addDoc(collection(db, "notifications"), {
-        type: "message",
-        fromUserId: user.uid,
-        fromUserName: user.displayName || "誰か",
-        toUserId: partner.id || chatId.replace(user.uid, "").replace("-", ""), // 相手のUID
-        chatId: chatId,
-        text: text, // メッセージの冒頭を通知に載せる
-        createdAt: serverTimestamp(),
-        read: false
-      });
-    }
-  } catch (err) {
-    console.error("Send error:", err);
-  }
-};
-
-    try {
-      // messagesサブコレクションに追加
+      // ① messagesサブコレクションにメッセージを追加
       await addDoc(collection(db, "chats", chatId, "messages"), {
         text: text,
         senderId: user.uid,
         createdAt: serverTimestamp(),
       });
 
-      // 親のchatsドキュメントを更新（一覧画面のプレビュー用）
+      // ② 親のchatsドキュメントを更新（一覧画面のプレビュー用）
       await updateDoc(doc(db, "chats", chatId), {
         lastMessage: text,
         updatedAt: serverTimestamp(),
       });
+
+      // ③ 【統合ポイント】相手に通知を送る
+      if (partner) {
+        await addDoc(collection(db, "notifications"), {
+          type: "message",
+          fromUserId: user.uid,
+          fromUserName: user.displayName || "誰か",
+          toUserId: partner.id, // 相手のUID
+          chatId: chatId,
+          text: text, // メッセージのプレビューとして表示
+          createdAt: serverTimestamp(),
+          read: false
+        });
+      }
+
     } catch (err) {
       console.error("Send error:", err);
     }
@@ -117,7 +102,7 @@ export default function ChatPage() {
 
   return (
     <div className="flex flex-col h-screen max-w-2xl border-x border-gray-100 bg-white relative">
-      {/* ヘッダー：相手の名前を表示 */}
+      {/* ヘッダー */}
       <div className="p-4 border-b font-bold sticky top-0 bg-white/80 backdrop-blur-md z-10 flex items-center gap-3">
         {partner && (
           <>
