@@ -1,34 +1,40 @@
+// app/layout.tsx
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Providers } from "@/components/Providers";
-import Sidebar from "@/components/Sidebar"; // 追加を確認
+import { Providers } from "@/components/Providers"; // 追加
 
-const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
-const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
 
 export const metadata: Metadata = {
   title: "ﾋｳｨｯﾋﾋｰ",
   description: "進化し続けるSNSっぽいもの",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
-// ... (import部分はそのまま)
-
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
+    // suppressHydrationWarning を追加（テーマ切り替え時のエラーを防ぐ）
     <html lang="ja" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white dark:bg-black`}>
-        <Providers>
-          {/* この flex 構造が Sidebar とコンテンツを横に並べます */}
-          <div className="flex flex-col sm:flex-row min-h-screen">
-            <Sidebar /> {/* ここで1回だけ呼ぶ */}
-            
-            {/* メインコンテンツ */}
-            <main className="flex-1 w-full max-w-2xl border-x border-gray-100 dark:border-gray-800 pt-14 sm:pt-0 pb-16 sm:pb-0">
-              {children}
-            </main>
-          </div>
-        </Providers>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
+        {/* Providers で全体を包む */}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
