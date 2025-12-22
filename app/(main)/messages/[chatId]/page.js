@@ -3,18 +3,11 @@
 import { useEffect, useState, useRef } from "react";
 import { db, auth } from "@/lib/firebase";
 import { 
-  collection, 
-  addDoc, 
-  query, 
-  orderBy, 
-  onSnapshot, 
-  serverTimestamp, 
-  doc, 
-  updateDoc,
-  getDoc 
+  collection, addDoc, query, orderBy, onSnapshot, 
+  serverTimestamp, doc, updateDoc, getDoc 
 } from "firebase/firestore";
 import { useParams } from "next/navigation";
-import { Send, Loader2 } from "lucide-react";
+import { Send } from "lucide-react";
 
 export default function ChatPage() {
   const { chatId } = useParams();
@@ -23,7 +16,6 @@ export default function ChatPage() {
   const [partner, setPartner] = useState(null);
   const scrollRef = useRef(null);
 
-  // 1. チャット相手の情報を取得（通知を送るためにIDも保存するように修正）
   useEffect(() => {
     const fetchPartner = async () => {
       const chatDoc = await getDoc(doc(db, "chats", chatId));
@@ -32,7 +24,6 @@ export default function ChatPage() {
         if (partnerId) {
           const userDoc = await getDoc(doc(db, "users", partnerId));
           if (userDoc.exists()) {
-            // IDも含めてセットすることで通知の宛先に使いやすくします
             setPartner({ id: userDoc.id, ...userDoc.data() });
           }
         }
@@ -41,7 +32,6 @@ export default function ChatPage() {
     fetchPartner();
   }, [chatId]);
 
-  // 2. メッセージのリアルタイム取得
   useEffect(() => {
     const q = query(
       collection(db, "chats", chatId, "messages"),
@@ -53,12 +43,10 @@ export default function ChatPage() {
     return () => unsubscribe();
   }, [chatId]);
 
-  // 3. メッセージ送信後の自動スクロール
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // メッセージ送信処理 ＆ 通知送信ロジックを統合
   const sendMessage = async (e) => {
     e.preventDefault();
     if (!inputText.trim()) return;
@@ -68,45 +56,41 @@ export default function ChatPage() {
     setInputText("");
 
     try {
-      // ① messagesサブコレクションにメッセージを追加
       await addDoc(collection(db, "chats", chatId, "messages"), {
         text: text,
         senderId: user.uid,
         createdAt: serverTimestamp(),
       });
 
-      // ② 親のchatsドキュメントを更新（一覧画面のプレビュー用）
       await updateDoc(doc(db, "chats", chatId), {
         lastMessage: text,
         updatedAt: serverTimestamp(),
       });
 
-      // ③ 【統合ポイント】相手に通知を送る
       if (partner) {
         await addDoc(collection(db, "notifications"), {
           type: "message",
           fromUserId: user.uid,
           fromUserName: user.displayName || "誰か",
-          toUserId: partner.id, // 相手のUID
+          toUserId: partner.id,
           chatId: chatId,
-          text: text, // メッセージのプレビューとして表示
+          text: text,
           createdAt: serverTimestamp(),
           read: false
         });
       }
-
     } catch (err) {
       console.error("Send error:", err);
     }
   };
 
   return (
-    <div className="flex flex-col h-screen max-w-2xl border-x border-gray-100 bg-white relative">
+    <div className="flex flex-col h-screen max-w-2xl border-x border-gray-100 dark:border-gray-800 bg-white dark:bg-black transition-colors relative">
       {/* ヘッダー */}
-      <div className="p-4 border-b font-bold sticky top-0 bg-white/80 backdrop-blur-md z-10 flex items-center gap-3">
+      <div className="p-4 border-b dark:border-gray-800 font-bold sticky top-0 bg-white/80 dark:bg-black/80 backdrop-blur-md z-10 flex items-center gap-3 dark:text-white">
         {partner && (
           <>
-            <img src={partner.photoURL} className="w-8 h-8 rounded-full object-cover" alt="" />
+            <img src={partner.photoURL} className="w-8 h-8 rounded-full object-cover border dark:border-gray-700" alt="" />
             <span>{partner.username}</span>
           </>
         )}
@@ -119,7 +103,9 @@ export default function ChatPage() {
           return (
             <div key={m.id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
               <div className={`max-w-[75%] p-3 rounded-2xl text-sm ${
-                isMe ? "bg-blue-500 text-white rounded-br-none" : "bg-gray-100 text-black rounded-bl-none"
+                isMe 
+                  ? "bg-blue-500 text-white rounded-br-none" 
+                  : "bg-gray-100 dark:bg-gray-800 text-black dark:text-white rounded-bl-none"
               }`}>
                 {m.text}
                 <div className={`text-[10px] mt-1 ${isMe ? "text-blue-100" : "text-gray-400"}`}>
@@ -133,12 +119,12 @@ export default function ChatPage() {
       </div>
 
       {/* 送信フォーム */}
-      <form onSubmit={sendMessage} className="p-4 border-t bg-white sticky bottom-0 flex gap-2">
+      <form onSubmit={sendMessage} className="p-4 border-t dark:border-gray-800 bg-white dark:bg-black sticky bottom-0 flex gap-2">
         <input 
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
           placeholder="新しいメッセージを作成"
-          className="flex-1 bg-gray-100 rounded-full px-4 py-2 outline-none focus:ring-2 ring-blue-500 transition"
+          className="flex-1 bg-gray-100 dark:bg-gray-900 dark:text-white rounded-full px-4 py-2 outline-none focus:ring-2 ring-blue-500 transition"
         />
         <button className="bg-blue-500 text-white p-2 rounded-full hover:bg-blue-600 transition disabled:opacity-50">
           <Send size={20} />
