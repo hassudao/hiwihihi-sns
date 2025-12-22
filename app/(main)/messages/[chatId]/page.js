@@ -65,6 +65,39 @@ export default function ChatPage() {
     setInputText("");
 
     try {
+    // 1. メッセージを保存
+    await addDoc(collection(db, "chats", chatId, "messages"), {
+      text: text,
+      senderId: user.uid,
+      createdAt: serverTimestamp(),
+    });
+
+    // 2. チャットの最終更新を保存
+    await updateDoc(doc(db, "chats", chatId), {
+      lastMessage: text,
+      updatedAt: serverTimestamp(),
+    });
+
+    // ★追加：相手に通知を送る
+    // partnerId は useEffect で既に特定できているはずです（partner.id など）
+    if (partner) {
+      await addDoc(collection(db, "notifications"), {
+        type: "message",
+        fromUserId: user.uid,
+        fromUserName: user.displayName || "誰か",
+        toUserId: partner.id || chatId.replace(user.uid, "").replace("-", ""), // 相手のUID
+        chatId: chatId,
+        text: text, // メッセージの冒頭を通知に載せる
+        createdAt: serverTimestamp(),
+        read: false
+      });
+    }
+  } catch (err) {
+    console.error("Send error:", err);
+  }
+};
+
+    try {
       // messagesサブコレクションに追加
       await addDoc(collection(db, "chats", chatId, "messages"), {
         text: text,
