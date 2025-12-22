@@ -1,3 +1,4 @@
+// components/Sidebar.js
 "use client";
 
 import { useEffect, useState } from "react";
@@ -32,16 +33,15 @@ export default function Sidebar() {
   };
 
   return (
-    /* 修正ポイント：bg-white dark:bg-black / border-gray-200 dark:border-gray-800 */
     <div className="flex flex-col justify-between h-screen p-4 border-r border-gray-200 dark:border-gray-800 w-20 md:w-64 fixed bg-white dark:bg-black transition-colors">
       <div className="flex flex-col gap-2">
         <div className="p-2 mb-4">
           <Link href="/home" className="inline-block hover:opacity-80 transition">
-            {/* 修正ポイント：dark:invert (黒ロゴを白反転) */}
+            {/* 修正：dark:invertを削除。元の色を維持 */}
             <img 
               src="/logo.png" 
               alt="Logo" 
-              className="w-60 h-15 object-contain dark:invert" 
+              className="w-60 h-15 object-contain" 
             />
           </Link>
         </div>
@@ -63,7 +63,6 @@ export default function Sidebar() {
               alt="my icon"
             />
             <div className="flex flex-col overflow-hidden">
-              {/* 修正ポイント：dark:text-white */}
               <span className="font-bold text-sm truncate dark:text-white">{me.username}</span>
               <span className="text-gray-500 text-xs truncate">@{me.email?.split('@')[0]}</span>
             </div>
@@ -72,7 +71,6 @@ export default function Sidebar() {
 
         <button 
           onClick={handleLogout}
-          /* 修正ポイント：dark:hover:bg-red-950/20 (暗い赤) */
           className="flex items-center gap-4 p-3 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-full text-red-500 transition w-full"
         >
           <LogOut />
@@ -85,7 +83,6 @@ export default function Sidebar() {
 
 function SidebarItem({ icon, label, href }) {
   return (
-    /* 修正ポイント：text-gray-800 dark:text-gray-200 / hover:bg-gray-100 dark:hover:bg-gray-900 */
     <Link 
       href={href} 
       className="flex items-center gap-4 p-3 hover:bg-gray-100 dark:hover:bg-gray-900 rounded-full transition text-xl text-gray-800 dark:text-gray-200"
