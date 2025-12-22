@@ -12,7 +12,6 @@ export default function Sidebar() {
   const router = useRouter();
   const [me, setMe] = useState(null);
 
-  // ログイン中のユーザー情報を取得
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
       if (user) {
@@ -26,20 +25,23 @@ export default function Sidebar() {
   }, []);
 
   const handleLogout = async () => {
-    await signOut(auth);
-    router.push("/login");
+    if (confirm("ログアウトしますか？")) {
+      await signOut(auth);
+      router.push("/login");
+    }
   };
 
   return (
-    <div className="flex flex-col justify-between h-screen p-4 border-r border-gray-200 w-20 md:w-64 fixed bg-white">
+    /* 修正ポイント：bg-white dark:bg-black / border-gray-200 dark:border-gray-800 */
+    <div className="flex flex-col justify-between h-screen p-4 border-r border-gray-200 dark:border-gray-800 w-20 md:w-64 fixed bg-white dark:bg-black transition-colors">
       <div className="flex flex-col gap-2">
-        {/* ロゴ部分：テキストから画像へ差し替え */}
         <div className="p-2 mb-4">
           <Link href="/home" className="inline-block hover:opacity-80 transition">
+            {/* 修正ポイント：dark:invert (黒ロゴを白反転) */}
             <img 
               src="/logo.png" 
               alt="Logo" 
-              className="w-60 h-15 object-contain" 
+              className="w-60 h-15 object-contain dark:invert" 
             />
           </Link>
         </div>
@@ -53,25 +55,25 @@ export default function Sidebar() {
       </div>
 
       <div className="flex flex-col gap-2">
-        {/* ユーザー簡易プロフ（追加） */}
         {me && (
           <div className="flex items-center gap-3 p-3 rounded-full hidden md:flex">
             <img 
               src={me.photoURL || "https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png"} 
-              className="w-10 h-10 rounded-full object-cover border"
+              className="w-10 h-10 rounded-full object-cover border dark:border-gray-700"
               alt="my icon"
             />
             <div className="flex flex-col overflow-hidden">
-              <span className="font-bold text-sm truncate">{me.username}</span>
+              {/* 修正ポイント：dark:text-white */}
+              <span className="font-bold text-sm truncate dark:text-white">{me.username}</span>
               <span className="text-gray-500 text-xs truncate">@{me.email?.split('@')[0]}</span>
             </div>
           </div>
         )}
 
-        {/* ログアウトボタン */}
         <button 
           onClick={handleLogout}
-          className="flex items-center gap-4 p-3 hover:bg-red-50 rounded-full text-red-500 transition w-full"
+          /* 修正ポイント：dark:hover:bg-red-950/20 (暗い赤) */
+          className="flex items-center gap-4 p-3 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-full text-red-500 transition w-full"
         >
           <LogOut />
           <span className="hidden md:inline font-bold">ログアウト</span>
@@ -83,8 +85,12 @@ export default function Sidebar() {
 
 function SidebarItem({ icon, label, href }) {
   return (
-    <Link href={href} className="flex items-center gap-4 p-3 hover:bg-gray-100 rounded-full transition text-xl text-gray-800">
-      {icon}
+    /* 修正ポイント：text-gray-800 dark:text-gray-200 / hover:bg-gray-100 dark:hover:bg-gray-900 */
+    <Link 
+      href={href} 
+      className="flex items-center gap-4 p-3 hover:bg-gray-100 dark:hover:bg-gray-900 rounded-full transition text-xl text-gray-800 dark:text-gray-200"
+    >
+      <span className="dark:text-white">{icon}</span>
       <span className="hidden md:inline">{label}</span>
     </Link>
   );
