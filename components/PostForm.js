@@ -59,11 +59,13 @@ export default function PostForm() {
   };
 
   return (
-    <div className="p-4 border-b border-gray-200">
-      <form onSubmit={handlePost}>
-        <textarea
-          className="w-full text-xl outline-none resize-none"
-          placeholder="いまどうしてる？"
+    // 修正箇所抜粋
+<div className="p-4 border-b border-gray-200 dark:border-gray-800">
+  <form onSubmit={handlePost}>
+    <textarea
+      className="w-full text-xl outline-none resize-none bg-transparent dark:text-white"
+      placeholder="いまどうしてる？"
+      // ...以下略
           rows="3"
           value={content}
           onChange={(e) => setContent(e.target.value)}
