@@ -18,7 +18,6 @@ export default function EditProfileModal({ userProfile, onClose }) {
     try {
       let photoURL = userProfile.photoURL;
 
-      // 1. 画像が新しく選択されていればCloudinaryにアップロード
       if (image) {
         const formData = new FormData();
         formData.append("file", image);
@@ -32,16 +31,14 @@ export default function EditProfileModal({ userProfile, onClose }) {
         photoURL = data.secure_url;
       }
 
-      // 2. Firestoreのユーザー情報を更新
       await updateDoc(doc(db, "users", auth.currentUser.uid), {
         username: username,
         bio: bio,
         photoURL: photoURL,
       });
 
-      alert("プロフィールを更新しました！");
-      onClose(); // モーダルを閉じる
-      window.location.reload(); // 画面をリロードして反映
+      onClose(); 
+      window.location.reload(); 
     } catch (error) {
       console.error(error);
       alert("更新に失敗しました");
@@ -51,18 +48,24 @@ export default function EditProfileModal({ userProfile, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white w-full max-w-lg rounded-2xl overflow-hidden">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      {/* 修正：bg-white dark:bg-black / dark:border-gray-800 */}
+      <div className="bg-white dark:bg-black w-full max-w-lg rounded-2xl overflow-hidden border dark:border-gray-800 shadow-2xl">
+        
         {/* ヘッダー */}
-        <div className="flex items-center justify-between p-4 border-b">
+        <div className="flex items-center justify-between p-4 border-b dark:border-gray-800">
           <div className="flex items-center gap-4">
-            <button onClick={onClose} className="hover:bg-gray-100 p-2 rounded-full"><X /></button>
-            <h2 className="text-xl font-bold">プロフィールを編集</h2>
+            {/* 修正：dark:text-white dark:hover:bg-gray-900 */}
+            <button onClick={onClose} className="hover:bg-gray-100 dark:hover:bg-gray-900 p-2 rounded-full dark:text-white transition">
+              <X size={20} />
+            </button>
+            <h2 className="text-xl font-bold dark:text-white">プロフィールを編集</h2>
           </div>
+          {/* 修正：ダークモードではボタンを白にする（X風） */}
           <button 
             onClick={handleSave}
             disabled={loading}
-            className="bg-black text-white px-4 py-1.5 rounded-full font-bold hover:bg-gray-800 disabled:opacity-50"
+            className="bg-black dark:bg-white text-white dark:text-black px-4 py-1.5 rounded-full font-bold hover:opacity-90 disabled:opacity-50 transition"
           >
             {loading ? <Loader2 className="animate-spin" size={18} /> : "保存"}
           </button>
@@ -71,32 +74,40 @@ export default function EditProfileModal({ userProfile, onClose }) {
         {/* 編集フォーム */}
         <div className="p-4 flex flex-col gap-6">
           {/* アイコン選択 */}
-          <div className="relative w-32 h-32 self-center">
+          <div className="relative w-32 h-32 self-center group">
             <img 
               src={image ? URL.createObjectURL(image) : (userProfile.photoURL || "https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png")} 
-              className="w-full h-full rounded-full object-cover brightness-75"
+              className="w-full h-full rounded-full object-cover brightness-75 group-hover:brightness-50 transition"
             />
-            <label className="absolute inset-0 flex items-center justify-center cursor-pointer text-white">
+            <label className="absolute inset-0 flex items-center justify-center cursor-pointer text-white drop-shadow-md">
               <Camera size={30} />
               <input type="file" className="hidden" accept="image/*" onChange={(e) => setImage(e.target.files[0])} />
             </label>
           </div>
 
           <div className="flex flex-col gap-4">
-            <input 
-              type="text" 
-              placeholder="名前" 
-              className="border p-3 rounded-md focus:outline-blue-500"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-            />
-            <textarea 
-              placeholder="自己紹介" 
-              rows="4"
-              className="border p-3 rounded-md focus:outline-blue-500 resize-none"
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-            />
+            {/* 修正：input/textarea の背景と文字色をダーク対応 */}
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-gray-500 px-1">名前</label>
+              <input 
+                type="text" 
+                placeholder="名前" 
+                className="bg-transparent border dark:border-gray-700 p-3 rounded-md focus:outline-blue-500 dark:text-white transition"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+              />
+            </div>
+            
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-gray-500 px-1">自己紹介</label>
+              <textarea 
+                placeholder="自己紹介" 
+                rows="4"
+                className="bg-transparent border dark:border-gray-700 p-3 rounded-md focus:outline-blue-500 dark:text-white resize-none transition"
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+              />
+            </div>
           </div>
         </div>
       </div>
