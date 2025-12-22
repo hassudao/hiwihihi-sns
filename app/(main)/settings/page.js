@@ -1,20 +1,40 @@
 "use client";
 
-import { auth } from "@/lib/firebase";
+import { useEffect, useState } from "react";
+import { auth, db } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
-import { LogOut, User, Mail, ShieldCheck, ChevronRight } from "lucide-react";
+import { LogOut, User, Mail, ShieldCheck, ChevronRight, Loader2 } from "lucide-react";
 
 export default function SettingsPage() {
   const router = useRouter();
-  const user = auth.currentUser;
+  const [userData, setUserData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      const user = auth.currentUser;
+      if (user) {
+        // Firestoreからプロフィール情報を取得
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        if (userDoc.exists()) {
+          setUserData(userDoc.data());
+        }
+      }
+      setLoading(false);
+    };
+    fetchUserData();
+  }, []);
 
   const handleLogout = async () => {
     if (confirm("ログアウトしますか？")) {
       await signOut(auth);
-      router.push("/login"); // ログイン画面へ戻る
+      router.push("/login");
     }
   };
+
+  if (loading) return <div className="flex justify-center p-10"><Loader2 className="animate-spin text-blue-500" /></div>;
 
   return (
     <div className="max-w-2xl border-x border-gray-100 min-h-screen bg-white">
@@ -27,21 +47,26 @@ export default function SettingsPage() {
         </div>
         
         <div className="flex items-center gap-4 p-4 border-b">
-          <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-500">
-            <User size={24} />
-          </div>
+          <img 
+            src={userData?.photoURL || "https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png"} 
+            className="w-12 h-12 rounded-full object-cover bg-gray-200"
+          />
           <div className="flex flex-col">
-            <span className="font-bold text-gray-900">{user?.displayName || "ユーザー名未設定"}</span>
-            <span className="text-sm text-gray-500">{user?.email}</span>
+            {/* これでProfile画面と同じ名前が表示されます */}
+            <span className="font-bold text-gray-900">{userData?.username || "ユーザー"}</span>
+            <span className="text-sm text-gray-500">{auth.currentUser?.email}</span>
           </div>
         </div>
 
-        <div className="p-4 border-b flex items-center justify-between hover:bg-gray-50 transition cursor-not-allowed text-gray-400">
+        {/* 飛べない理由は href が設定されていないためです。
+          もし変更画面を作りたい場合は、新しいページファイルを作って Link で繋ぎます。
+        */}
+        <div className="p-4 border-b flex items-center justify-between group cursor-pointer hover:bg-gray-50 transition">
           <div className="flex items-center gap-3">
-            <Mail size={20} />
-            <span>メールアドレスの変更</span>
+            <Mail size={20} className="text-gray-400" />
+            <span>メールアドレス（変更不可）</span>
           </div>
-          <ChevronRight size={18} />
+          <span className="text-xs text-gray-400">編集には認証が必要です</span>
         </div>
 
         {/* セキュリティセクション */}
@@ -49,16 +74,16 @@ export default function SettingsPage() {
           セキュリティ
         </div>
         
-        <div className="p-4 border-b flex items-center justify-between hover:bg-gray-50 transition cursor-not-allowed text-gray-400">
+        <div className="p-4 border-b flex items-center justify-between group cursor-pointer hover:bg-gray-50 transition">
           <div className="flex items-center gap-3">
-            <ShieldCheck size={20} />
-            <span>パスワードの再設定</span>
+            <ShieldCheck size={20} className="text-gray-400" />
+            <span>パスワード再設定（準備中）</span>
           </div>
-          <ChevronRight size={18} />
+          <ChevronRight size={18} className="text-gray-300" />
         </div>
 
         {/* アクションセクション */}
-        <div className="mt-8 px-4">
+        <div className="mt-8 px-4 pb-10">
           <button 
             onClick={handleLogout}
             className="w-full flex items-center justify-center gap-2 p-4 text-red-500 font-bold border border-red-100 rounded-2xl hover:bg-red-50 transition"
@@ -67,10 +92,6 @@ export default function SettingsPage() {
             ログアウト
           </button>
         </div>
-
-        <p className="text-center text-gray-400 text-xs mt-8">
-          X-Clone Version 1.0.0
-        </p>
       </div>
     </div>
   );
