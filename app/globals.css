@@ -1,8 +1,17 @@
 @import "tailwindcss";
 
+/* 1. v4で「class="dark"」による切り替えを有効にする設定 */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
+}
+
+/* 2. .dark クラスが付いた時の色を定義（OS設定より優先されるようになります） */
+.dark {
+  --background: #000000; /* 真っ黒にしたい場合は #000000 */
+  --foreground: #ededed;
 }
 
 @theme inline {
@@ -12,15 +21,10 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
-  background: var(--background);
+  /* 3. 背景色と文字色をテーマ変数に固定 */
+  background-color: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  transition: background-color 0.3s, color 0.3s; /* 切り替えをスムーズに */
 }
