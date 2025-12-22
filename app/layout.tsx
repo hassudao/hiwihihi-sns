@@ -12,19 +12,19 @@ export const metadata: Metadata = {
   description: "進化し続けるSNSっぽいもの",
 };
 
+// ... (import部分はそのまま)
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ja" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white dark:bg-black transition-colors`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white dark:bg-black`}>
         <Providers>
-          {/* FlexコンテナでSidebarとMainを横並びにする */}
+          {/* この flex 構造が Sidebar とコンテンツを横に並べます */}
           <div className="flex flex-col sm:flex-row min-h-screen">
-            <Sidebar />
+            <Sidebar /> {/* ここで1回だけ呼ぶ */}
             
-            {/* メインコンテンツエリア */}
-            {/* mx-autoでPC時に中央に寄せ、max-wでX（旧Twitter）風の幅に制限 */}
-            <main className="flex-1 w-full max-w-2xl border-x border-gray-100 dark:border-gray-800 
-                             pt-14 sm:pt-0 pb-16 sm:pb-0 min-h-screen">
+            {/* メインコンテンツ */}
+            <main className="flex-1 w-full max-w-2xl border-x border-gray-100 dark:border-gray-800 pt-14 sm:pt-0 pb-16 sm:pb-0">
               {children}
             </main>
           </div>
