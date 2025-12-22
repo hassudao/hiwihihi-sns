@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { db } from "@/lib/firebase";
 import { collection, query, where, getDocs, limit } from "firebase/firestore";
-import { Search, User as UserIcon, Loader2 } from "lucide-react";
+import { Search, Loader2 } from "lucide-react";
 import Link from "next/link";
 
 export default function SearchPage() {
@@ -11,7 +11,6 @@ export default function SearchPage() {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // 検索処理
   const handleSearch = async (e) => {
     e.preventDefault();
     if (!searchTerm.trim()) return;
@@ -39,15 +38,15 @@ export default function SearchPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-black transition-colors">
       {/* 検索バーヘッダー */}
-      <div className="sticky top-0 bg-white/80 backdrop-blur-md p-4 border-b border-gray-200 z-10">
+      <div className="sticky top-0 bg-white/80 dark:bg-black/80 backdrop-blur-md p-4 border-b border-gray-200 dark:border-gray-800 z-10">
         <form onSubmit={handleSearch} className="relative">
-          <Search className="absolute left-3 top-3 text-gray-400" size={20} />
+          <Search className="absolute left-3 top-3 text-gray-400 dark:text-gray-500" size={20} />
           <input
             type="text"
             placeholder="ユーザーを検索"
-            className="w-full bg-gray-100 border-none rounded-full py-2.5 pl-12 pr-4 focus:ring-2 focus:ring-blue-500 outline-none"
+            className="w-full bg-gray-100 dark:bg-gray-900 border-none rounded-full py-2.5 pl-12 pr-4 focus:ring-2 focus:ring-blue-500 outline-none dark:text-white dark:placeholder-gray-500 transition"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -65,21 +64,21 @@ export default function SearchPage() {
             <Link 
               href={`/profile/${user.id}`} 
               key={user.id}
-              className="flex items-center gap-3 p-4 hover:bg-gray-50 transition border-b border-gray-100"
+              className="flex items-center gap-3 p-4 hover:bg-gray-50 dark:hover:bg-gray-900 transition border-b border-gray-100 dark:border-gray-800"
             >
               <img 
                 src={user.photoURL || "https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png"} 
-                className="w-12 h-12 rounded-full object-cover bg-gray-200"
+                className="w-12 h-12 rounded-full object-cover bg-gray-200 dark:bg-gray-700"
               />
               <div className="flex flex-col">
-                <span className="font-bold hover:underline">{user.username}</span>
+                <span className="font-bold dark:text-white hover:underline">{user.username}</span>
                 <span className="text-gray-500 text-sm">@{user.email?.split('@')[0]}</span>
               </div>
             </Link>
           ))
         ) : (
           searchTerm && !loading && (
-            <p className="p-10 text-center text-gray-500">ユーザーが見つかりませんでした</p>
+            <p className="p-10 text-center text-gray-500 dark:text-gray-400">ユーザーが見つかりませんでした</p>
           )
         )}
       </div>
