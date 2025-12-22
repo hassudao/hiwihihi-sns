@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
-import { signOut } from "firebase/auth";
+import { signOut, sendPasswordResetEmail } from "firebase/auth"; // sendPasswordResetEmail を追加
 import { useRouter } from "next/navigation";
 import { LogOut, User, Mail, ShieldCheck, ChevronRight, Loader2 } from "lucide-react";
 
@@ -27,6 +27,7 @@ export default function SettingsPage() {
     fetchUserData();
   }, []);
 
+  // ログアウト処理
   const handleLogout = async () => {
     if (confirm("ログアウトしますか？")) {
       await signOut(auth);
@@ -34,7 +35,25 @@ export default function SettingsPage() {
     }
   };
 
-  if (loading) return <div className="flex justify-center p-10"><Loader2 className="animate-spin text-blue-500" /></div>;
+  // ★追加：パスワード再設定メール送信処理
+  const handleResetPassword = async () => {
+    const email = auth.currentUser?.email;
+    if (!email) return;
+
+    try {
+      await sendPasswordResetEmail(auth, email);
+      alert("パスワード再設定用のメールを送信しました！メールボックスを確認してください。");
+    } catch (error) {
+      console.error("Reset error:", error);
+      alert("メールの送信に失敗しました。しばらく時間を置いてから再度お試しください。");
+    }
+  };
+
+  if (loading) return (
+    <div className="flex justify-center p-10">
+      <Loader2 className="animate-spin text-blue-500" />
+    </div>
+  );
 
   return (
     <div className="max-w-2xl border-x border-gray-100 min-h-screen bg-white">
@@ -50,23 +69,20 @@ export default function SettingsPage() {
           <img 
             src={userData?.photoURL || "https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png"} 
             className="w-12 h-12 rounded-full object-cover bg-gray-200"
+            alt="User avatar"
           />
           <div className="flex flex-col">
-            {/* これでProfile画面と同じ名前が表示されます */}
             <span className="font-bold text-gray-900">{userData?.username || "ユーザー"}</span>
             <span className="text-sm text-gray-500">{auth.currentUser?.email}</span>
           </div>
         </div>
 
-        {/* 飛べない理由は href が設定されていないためです。
-          もし変更画面を作りたい場合は、新しいページファイルを作って Link で繋ぎます。
-        */}
-        <div className="p-4 border-b flex items-center justify-between group cursor-pointer hover:bg-gray-50 transition">
+        <div className="p-4 border-b flex items-center justify-between group cursor-default text-gray-400">
           <div className="flex items-center gap-3">
-            <Mail size={20} className="text-gray-400" />
+            <Mail size={20} />
             <span>メールアドレス（変更不可）</span>
           </div>
-          <span className="text-xs text-gray-400">編集には認証が必要です</span>
+          <span className="text-xs">認証制限あり</span>
         </div>
 
         {/* セキュリティセクション */}
@@ -74,10 +90,14 @@ export default function SettingsPage() {
           セキュリティ
         </div>
         
-        <div className="p-4 border-b flex items-center justify-between group cursor-pointer hover:bg-gray-50 transition">
+        {/* ★修正：パスワード再設定を実行可能に */}
+        <div 
+          onClick={handleResetPassword}
+          className="p-4 border-b flex items-center justify-between group cursor-pointer hover:bg-gray-50 transition"
+        >
           <div className="flex items-center gap-3">
-            <ShieldCheck size={20} className="text-gray-400" />
-            <span>パスワード再設定（準備中）</span>
+            <ShieldCheck size={20} className="text-blue-500" />
+            <span className="font-medium text-gray-700">パスワードを再設定する</span>
           </div>
           <ChevronRight size={18} className="text-gray-300" />
         </div>
