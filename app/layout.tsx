@@ -1,6 +1,8 @@
+// app/layout.tsx
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { Providers } from "@/components/Providers"; // 追加
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -12,11 +14,11 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata = {
-  title: "ﾋｳｨｯﾋﾋｰ", // ここにサイト名を入力
+export const metadata: Metadata = {
+  title: "ﾋｳｨｯﾋﾋｰ",
   description: "進化し続けるSNSっぽいもの",
   icons: {
-    icon: "/favicon.ico", // または "/logo.png" でもOK
+    icon: "/favicon.ico",
   },
 };
 
@@ -26,11 +28,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    // suppressHydrationWarning を追加（テーマ切り替え時のエラーを防ぐ）
+    <html lang="ja" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        {/* Providers で全体を包む */}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
