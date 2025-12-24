@@ -8,44 +8,44 @@ import {
   addDoc, getDocs, serverTimestamp 
 } from "firebase/firestore";
 import { useParams, useRouter } from "next/navigation";
-import { CalendarDays, Loader2, Mail } from "lucide-react";
+import { CalendarDays, Loader2, Mail, ArrowLeft } from "lucide-react";
 import EditProfileModal from "@/components/EditProfileModal";
+import PostList from "@/components/PostList"; // ★追加
 
 export default function ProfilePage() {
   const { id } = useParams();
   const router = useRouter();
   const [userProfile, setUserProfile] = useState(null);
   const [myProfile, setMyProfile] = useState(null);
-  const [userPosts, setUserPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isEditOpen, setIsEditOpen] = useState(false);
 
+  // IDの解決（"me" の場合は自分のUIDを取得）
+  const [targetUid, setTargetUid] = useState(null);
+
   useEffect(() => {
     const unsubscribeAuth = auth.onAuthStateChanged(async (user) => {
-      let targetUid = id === "me" ? user?.uid : id;
-      if (!targetUid) return;
+      let uid = id === "me" ? user?.uid : id;
+      if (!uid) {
+        if (id === "me" && !user) router.push("/"); // ログインしてないのに "me" に来たら戻す
+        return;
+      }
+      setTargetUid(uid);
 
       if (user) {
         const myDoc = await getDoc(doc(db, "users", user.uid));
         setMyProfile(myDoc.data());
       }
 
-      const userDoc = await getDoc(doc(db, "users", targetUid));
+      const userDoc = await getDoc(doc(db, "users", uid));
       if (userDoc.exists()) {
         setUserProfile({ id: userDoc.id, ...userDoc.data() });
       }
-
-      const q = query(collection(db, "posts"), where("uid", "==", targetUid), orderBy("createdAt", "desc"));
-      const unsubscribePosts = onSnapshot(q, (snapshot) => {
-        setUserPosts(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
-        setLoading(false);
-      });
-
-      return () => unsubscribePosts();
+      setLoading(false);
     });
 
     return () => unsubscribeAuth();
-  }, [id]);
+  }, [id, router]);
 
   const handleFollow = async () => {
     if (!auth.currentUser || !userProfile) return;
@@ -69,7 +69,6 @@ export default function ProfilePage() {
           });
         }
       }
-      // window.location.reload(); // 必要であればリロードなしで状態更新するのがベターですが、一旦そのまま
     } catch (error) { console.error("Follow error:", error); }
   };
 
@@ -90,35 +89,36 @@ export default function ProfilePage() {
     }
   };
 
-  if (loading) return (
+  if (loading || !userProfile) return (
     <div className="flex flex-col items-center justify-center h-screen gap-2 bg-white dark:bg-black">
       <Loader2 className="animate-spin text-blue-500" size={40} />
       <p className="text-gray-500">読み込み中...</p>
     </div>
   );
 
-  const isMe = id === "me" || id === auth.currentUser?.uid;
-  const isFollowing = myProfile?.following?.includes(userProfile.id);
+  const isMe = id === "me" || targetUid === auth.currentUser?.uid;
+  const isFollowingNow = myProfile?.following?.includes(userProfile.id);
 
   return (
     <div className="min-h-screen bg-white dark:bg-black transition-colors">
       {/* ヘッダー */}
       <div className="p-4 border-b border-gray-200 dark:border-gray-800 flex items-center gap-6 sticky top-0 bg-white/80 dark:bg-black/80 backdrop-blur-md z-10">
-        <h1 className="text-xl font-bold dark:text-white">{userProfile.username}</h1>
+        <button onClick={() => router.back()} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-900 rounded-full transition">
+          <ArrowLeft size={20} className="dark:text-white" />
+        </button>
+        <div>
+          <h1 className="text-xl font-bold dark:text-white">{userProfile.username}</h1>
+        </div>
       </div>
 
       <div className="relative">
-        {/* ヘッダー画像（仮） */}
         <div className="h-48 bg-gray-200 dark:bg-gray-800 w-full" />
-        
         <div className="px-4">
           <div className="flex justify-between items-end -mt-16 mb-4">
-            {/* アイコンの縁取りをダーク対応 */}
             <img 
               src={userProfile.photoURL || "https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png"} 
               className="w-32 h-32 rounded-full border-4 border-white dark:border-black bg-gray-300 object-cover" 
             />
-            
             <div className="flex gap-2 mb-2 items-center">
               {isMe ? (
                 <button onClick={() => setIsEditOpen(true)} className="border border-gray-300 dark:border-gray-700 font-bold px-4 py-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 dark:text-white transition">
@@ -132,12 +132,12 @@ export default function ProfilePage() {
                   <button 
                     onClick={handleFollow}
                     className={`font-bold px-6 py-2 rounded-full transition ${
-                      isFollowing 
+                      isFollowingNow 
                         ? "border border-gray-300 dark:border-gray-700 dark:text-white hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-500 hover:border-red-200" 
                         : "bg-black dark:bg-white text-white dark:text-black hover:opacity-90"
                     }`}
                   >
-                    {isFollowing ? "フォロー中" : "フォローする"}
+                    {isFollowingNow ? "フォロー中" : "フォローする"}
                   </button>
                 </>
               )}
@@ -164,23 +164,9 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* 投稿一覧セクション */}
+      {/* ★投稿一覧セクションを共通コンポーネントに差し替え */}
       <div className="mt-2">
-        {userPosts.map((post) => (
-          <div key={post.id} className="p-4 border-b border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900/30 transition">
-            <div className="flex gap-3">
-              <img src={userProfile.photoURL || "https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png"} className="w-12 h-12 rounded-full object-cover" />
-              <div className="w-full">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold dark:text-white">{userProfile.username}</span>
-                  <span className="text-gray-500 text-sm">{post.createdAt?.toDate().toLocaleDateString()}</span>
-                </div>
-                <p className="mt-1 whitespace-pre-wrap dark:text-gray-200">{post.text}</p>
-                {post.image && <img src={post.image} className="mt-3 rounded-2xl max-h-80 w-full object-cover border border-gray-100 dark:border-gray-800" />}
-              </div>
-            </div>
-          </div>
-        ))}
+        {targetUid && <PostList userId={targetUid} />}
       </div>
 
       {isEditOpen && <EditProfileModal userProfile={userProfile} onClose={() => setIsEditOpen(false)} />}
