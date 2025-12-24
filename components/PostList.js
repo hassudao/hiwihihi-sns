@@ -149,6 +149,17 @@ export default function PostList() {
     }
   };
 
+  // ★追加：共有（リンクコピー）処理
+  const handleShare = async (postId) => {
+    const shareUrl = `${window.location.origin}/post/${postId}`;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      alert("リンクをクリップボードにコピーしました！");
+    } catch (err) {
+      console.error("コピーに失敗しました", err);
+    }
+  };
+
   return (
     <div className="flex flex-col">
       {posts.length === 0 && (
@@ -194,6 +205,7 @@ export default function PostList() {
                 )}
 
                 <div className="flex justify-between mt-3 text-gray-500 dark:text-gray-400 max-w-md">
+                  {/* リプライボタン */}
                   <button 
                     onClick={() => setReplyingTo(replyingTo === post.id ? null : post.id)}
                     className={`flex items-center gap-1 p-2 rounded-full transition ${replyingTo === post.id ? "text-blue-500 bg-blue-50 dark:bg-blue-900/20" : "hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20"}`}
@@ -204,6 +216,7 @@ export default function PostList() {
                   <button className="hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 p-2 rounded-full transition">
                     <Repeat2 size={18} />
                   </button>
+                  
                   <button 
                     onClick={() => handleLike(post.id, post.likes, post.uid)}
                     className={`flex items-center gap-1 p-2 rounded-full transition ${isLiked ? "text-pink-500" : "hover:text-pink-500 hover:bg-pink-50 dark:hover:bg-pink-900/20"}`}
@@ -211,7 +224,13 @@ export default function PostList() {
                     <Heart size={18} fill={isLiked ? "currentColor" : "none"} />
                     <span className="text-xs">{post.likes?.length || 0}</span>
                   </button>
-                  <button className="hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 p-2 rounded-full transition">
+
+                  {/* ★修正：共有ボタン */}
+                  <button 
+                    onClick={() => handleShare(post.id)}
+                    className="hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 p-2 rounded-full transition"
+                    title="リンクをコピー"
+                  >
                     <Share size={18} />
                   </button>
                 </div>
@@ -235,7 +254,6 @@ export default function PostList() {
                   </div>
                 )}
 
-                {/* リプライ一覧をここに表示 */}
                 <ReplyList postId={post.id} />
               </div>
             </div>
